@@ -4,6 +4,8 @@
 
 #![allow(unstable)]
 
+#![doc(html_logo_url = "./icon.png")]
+
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate byteorder;
 
