@@ -137,7 +137,7 @@ pub fn encode_into<T: Encodable, W: Writer>(t: &T, w: &mut W, size_limit: SizeLi
     t.encode(&mut writer::EncoderWriter::new(w, size_limit))
 }
 
-/// Decoes an object directly from a `Buffer`ed Reader.
+/// Decodes an object directly from a `Buffer`ed Reader.
 ///
 /// If the provided `SizeLimit` is reached, the decode will bail immediately.
 /// A SizeLimit can help prevent an attacker from flooding your server with
@@ -152,7 +152,7 @@ DecodingResult<T> {
 }
 
 
-/// Returns the size that an object would be if encoded using bincode.
+/// Returns the number of bytes that object would take if encoded using bincode.
 ///
 /// This is used internally as part of the check for encode_into, but it can
 /// be useful for preallocating buffers if thats your style.
