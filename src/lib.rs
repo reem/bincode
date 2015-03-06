@@ -19,6 +19,8 @@ use writer::SizeChecker;
 
 use std::io::{Write, Read};
 
+pub use byteorder::{ByteOrder, LittleEndian, BigEndian};
+
 mod writer;
 mod reader;
 mod refbox;
@@ -78,7 +80,7 @@ pub enum SizeLimit {
 ///
 /// If the encoding would take more bytes than allowed by `size_limit`,
 /// an error is returned.
-pub fn encode<T: Encodable>(t: &T, size_limit: SizeLimit) -> EncodingResult<Vec<u8>> {
+pub fn encode<T: Encodable, B:ByteOrder=BigEndian>(t: &T, size_limit: SizeLimit) -> EncodingResult<Vec<u8>> {
     // Since we are putting values directly into a vector, we can do size
     // computation out here and pre-allocate a buffer of *exactly*
     // the right size.
@@ -90,7 +92,7 @@ pub fn encode<T: Encodable>(t: &T, size_limit: SizeLimit) -> EncodingResult<Vec<
         vec![]
     };
 
-    match encode_into(t, &mut w, SizeLimit::Infinite) {
+    match encode_into::<_, _, B>(t, &mut w, SizeLimit::Infinite) {
         Ok(()) => Ok(w),
         Err(e) => Err(e)
     }
@@ -100,9 +102,9 @@ pub fn encode<T: Encodable>(t: &T, size_limit: SizeLimit) -> EncodingResult<Vec<
 ///
 /// This method does not have a size-limit because if you already have the bytes
 /// in memory, then you don't gain anything by having a limiter.
-pub fn decode<T: Decodable>(b: &[u8]) -> DecodingResult<T> {
+pub fn decode<T: Decodable, B: ByteOrder=BigEndian>(b: &[u8]) -> DecodingResult<T> {
     let mut b = b;
-    decode_from(&mut b, SizeLimit::Infinite)
+    decode_from::<_, _, B>(&mut b, SizeLimit::Infinite)
 }
 
 /// Encodes an object directly into a `Writer`.
@@ -113,7 +115,9 @@ pub fn decode<T: Decodable>(b: &[u8]) -> DecodingResult<T> {
 /// If this returns an `EncodingError` (other than SizeLimit), assume that the
 /// writer is in an invalid state, as writing could bail out in the middle of
 /// encoding.
-pub fn encode_into<T: Encodable, W: Write>(t: &T, w: &mut W, size_limit: SizeLimit) -> EncodingResult<()> {
+pub fn encode_into<T, W, B=BigEndian>(t: &T, w: &mut W, size_limit: SizeLimit)
+-> EncodingResult<()>
+where T: Encodable, W: Write, B: ByteOrder {
     try!(match size_limit {
         SizeLimit::Infinite => Ok(()),
         SizeLimit::Bounded(x) => {
@@ -122,7 +126,7 @@ pub fn encode_into<T: Encodable, W: Write>(t: &T, w: &mut W, size_limit: SizeLim
         }
     });
 
-    t.encode(&mut writer::EncoderWriter::new(w))
+    t.encode(&mut <writer::EncoderWriter<W, B>>::new(w))
 }
 
 /// Decoes an object directly from a `Buffer`ed Reader.
@@ -134,9 +138,9 @@ pub fn encode_into<T: Encodable, W: Write>(t: &T, w: &mut W, size_limit: SizeLim
 /// If this returns an `DecodingError`, assume that the buffer that you passed
 /// in is in an invalid state, as the error could be returned during any point
 /// in the reading.
-pub fn decode_from<R: Read, T: Decodable>(r: &mut R, size_limit: SizeLimit) ->
+pub fn decode_from<R: Read, T: Decodable, B: ByteOrder=BigEndian>(r: &mut R, size_limit: SizeLimit) ->
 DecodingResult<T> {
-    Decodable::decode(&mut reader::DecoderReader::new(r, size_limit))
+    Decodable::decode(&mut <reader::DecoderReader<_, B>>::new(r, size_limit))
 }
 
 
